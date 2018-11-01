@@ -25,7 +25,7 @@
         <h1>Nongfu</h1>
         <p><a href="https://github.com/mthli/Nongfu">GitHub</a> | <a href="https://github.com/mthli/Nongfu/issues">Issues</a></p>
         <br />
-        <p>A IntelliJ IDEA plugin that help you move files to module quickly.</p>
+        <p>A IntelliJ IDEA plugin that help you move files or directories to target module quickly.</p>
         <p>A common scene is moving resources in Android Studio 3.x, because of it's "Modularize..." action usually miss some resources dependency.</p>
         <br />
         <p><b>Usage:</b> Refactor → Move to Module...</p>

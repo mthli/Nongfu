@@ -1,9 +1,11 @@
 Nongfu
 ===
 
-A IntelliJ IDEA plugin that help you move files to module quickly. 
+A IntelliJ IDEA plugin that help you move files or directories to target module quickly.
 
 A common scene is moving resources in Android Studio 3.x, because of it's "Modularize..." action usually miss some resources dependency.
+
+**Install:** Search "Nongfu" in IDEA plugins repositories, or [download latest release jar](https://github.com/mthli/Nongfu/releases) to disk for install.
 
 **Usage:** Refactor → Move to Module...
 
