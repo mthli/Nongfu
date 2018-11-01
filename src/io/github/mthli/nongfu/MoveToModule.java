@@ -33,7 +33,15 @@ public final class MoveToModule extends BaseAction {
 
     @Override
     boolean isEnable(@Nonnull AnActionEvent event) {
-        return MoveHandler.canMove(BaseRefactoringAction.getPsiElementArray(event.getDataContext()), null);
+        // If every single PsiElement can move, then return true
+        PsiElement[] array = BaseRefactoringAction.getPsiElementArray(event.getDataContext());
+        for (PsiElement element : array) {
+            if (!MoveHandler.canMove(new PsiElement[]{element}, null)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
