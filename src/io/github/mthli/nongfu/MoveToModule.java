@@ -90,7 +90,7 @@ public final class MoveToModule extends BaseAction {
                 event.getProject(), new PsiElement[]{currentPsiElement}, targetPsiDirectory, true, true, true,
                 () -> onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath), () -> {});
         processor.setPrepareSuccessfulSwingThreadCallback(null);
-        processor.setPreviewUsages(true);
+        processor.setPreviewUsages(currentVirtualFile.isWritable());
         processor.run();
     }
 }
