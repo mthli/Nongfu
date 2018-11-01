@@ -20,6 +20,8 @@ import com.intellij.ide.util.DirectoryUtil;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.DataKeys;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
@@ -208,6 +210,13 @@ abstract class BaseAction extends AnAction {
         });
     }
 
+    final void invokeLater(@Nonnull AnActionEvent event, @Nonnull Runnable runnable) {
+        // noinspection ConstantConditions
+        ApplicationManager.getApplication().invokeLater(runnable,
+                ModalityState.defaultModalityState(), event.getProject().getDisposed());
+    }
+
+    @SuppressWarnings("SameParameterValue")
     final void showErrorHint(@Nonnull AnActionEvent event, @Nonnull String title, @Nonnull String message) {
         // noinspection ConstantConditions
         CommonRefactoringUtil.showErrorHint(event.getProject(), null, title, message, null);
