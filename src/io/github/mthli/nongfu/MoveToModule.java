@@ -21,14 +21,20 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiReference;
 import com.intellij.refactoring.actions.BaseRefactoringAction;
 import com.intellij.refactoring.move.MoveHandler;
 
 import javax.annotation.Nonnull;
+import java.util.Collections;
+import java.util.List;
 import java.util.Queue;
 
 public final class MoveToModule extends BaseAction {
     private static final String ERROR_HINT_TITLE = "Move Failed :(";
+
+    private MoveProcessor mMoveProcessor;
+    private List<PsiReference> mCachedReferenceList = Collections.emptyList();
 
     @Override
     boolean isEnable(@Nonnull AnActionEvent event) {
@@ -85,14 +91,35 @@ public final class MoveToModule extends BaseAction {
             return;
         }
 
+        // Little trick, avoid redundant check
+        boolean shouldCheckReferences;
+        if (mCachedReferenceList.isEmpty()) {
+            shouldCheckReferences = true;
+        } else {
+            boolean matchAllCacheReferences = true;
+            for (PsiReference reference : mCachedReferenceList) {
+                if (!reference.isReferenceTo(currentPsiElement)) {
+                    matchAllCacheReferences = false;
+                }
+            }
+
+            shouldCheckReferences = !matchAllCacheReferences;
+        }
+
         Project project = event.getProject();
         // noinspection ConstantConditions
-        MoveProcessor processor = new MoveProcessor(
-                project, new PsiElement[]{currentPsiElement}, targetPsiDirectory, true, true, true,
-                () -> invokeLater(event, () -> onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath)),
-                () -> {});
-        processor.setPrepareSuccessfulSwingThreadCallback(null);
-        processor.setPreviewUsages(currentVirtualFile.isWritable());
-        processor.run();
+        mMoveProcessor = new MoveProcessor(
+                project, new PsiElement[]{currentPsiElement}, targetPsiDirectory,
+                shouldCheckReferences, shouldCheckReferences, shouldCheckReferences,
+                () -> {
+                    if (shouldCheckReferences && mMoveProcessor != null) {
+                        mCachedReferenceList = mMoveProcessor.getCachedReferenceList();
+                    }
+
+                    invokeLater(event, () -> onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath));
+                }, () -> {});
+        mMoveProcessor.setPrepareSuccessfulSwingThreadCallback(null);
+        mMoveProcessor.setPreviewUsages(shouldCheckReferences && currentVirtualFile.isWritable());
+        mMoveProcessor.run();
     }
 }
