@@ -17,6 +17,9 @@
 package io.github.mthli.nongfu;
 
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
@@ -86,9 +89,14 @@ public final class MoveToModule extends BaseAction {
             return;
         }
 
+        Project project = event.getProject();
+        // noinspection ConstantConditions
         BaseRefactoringProcessor processor = new MoveFilesOrDirectoriesProcessor(
-                event.getProject(), new PsiElement[]{currentPsiElement}, targetPsiDirectory, true, true, true,
-                () -> onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath), () -> {});
+                project, new PsiElement[]{currentPsiElement}, targetPsiDirectory, true, true, true,
+                () -> ApplicationManager.getApplication().invokeLater(
+                        () -> onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath),
+                        ModalityState.defaultModalityState(), project.getDisposed()),
+                () -> {});
         processor.setPrepareSuccessfulSwingThreadCallback(null);
         processor.setPreviewUsages(currentVirtualFile.isWritable());
         processor.run();
