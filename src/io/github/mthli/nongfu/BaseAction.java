@@ -39,6 +39,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.swing.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 abstract class BaseAction extends AnAction {
     abstract boolean isEnable(@Nonnull AnActionEvent event);
@@ -126,17 +127,11 @@ abstract class BaseAction extends AnAction {
 
     @Nonnull
     private List<Module> getModuleList(@Nonnull AnActionEvent event) {
-        List<Module> list = new ArrayList<>();
-
         // noinspection ConstantConditions
         Module[] modules = ModuleManager.getInstance(event.getProject()).getModules();
-        for (Module module : modules) {
-            if (!module.getName().equals(event.getProject().getName())) {
-                list.add(module);
-            }
-        }
-
-        return list;
+        return Arrays.stream(modules)
+                .filter(module -> !module.getName().equals(event.getProject().getName()))
+                .collect(Collectors.toList());
     }
 
     @Nonnull
@@ -144,15 +139,10 @@ abstract class BaseAction extends AnAction {
         List<Module> moduleList = getModuleList(event);
         moduleList.remove(mCurrentModule);
 
-        List<String> moduleNameList = new ArrayList<>();
-        for (Module module : moduleList) {
-            moduleNameList.add("Module: '" + module.getName() + "'");
-        }
-
         ComboBox<String> comboBox = new ComboBox<>();
-        for (String item : moduleNameList) {
-            comboBox.addItem(item);
-        }
+        moduleList.stream()
+                .map(module -> "Module: '" + module.getName() + "'")
+                .forEach(comboBox::addItem);
 
         // Remember latest selection
         if (mTargetModule == null || !moduleList.contains(mTargetModule)) {
