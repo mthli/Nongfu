@@ -62,7 +62,7 @@ final class MoveProcessor extends MoveFilesOrDirectoriesProcessor {
     }
 
     @Nonnull
-    public List<PsiReference> getCachedReferenceList() {
+    List<PsiReference> getCachedReferenceList() {
         return mCachedReferenceList;
     }
 }
