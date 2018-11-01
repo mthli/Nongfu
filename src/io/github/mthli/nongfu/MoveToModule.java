@@ -21,10 +21,8 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDirectory;
 import com.intellij.psi.PsiElement;
-import com.intellij.refactoring.BaseRefactoringProcessor;
 import com.intellij.refactoring.actions.BaseRefactoringAction;
 import com.intellij.refactoring.move.MoveHandler;
-import com.intellij.refactoring.move.moveFilesOrDirectories.MoveFilesOrDirectoriesProcessor;
 
 import javax.annotation.Nonnull;
 import java.util.Queue;
@@ -89,7 +87,7 @@ public final class MoveToModule extends BaseAction {
 
         Project project = event.getProject();
         // noinspection ConstantConditions
-        BaseRefactoringProcessor processor = new MoveFilesOrDirectoriesProcessor(
+        MoveProcessor processor = new MoveProcessor(
                 project, new PsiElement[]{currentPsiElement}, targetPsiDirectory, true, true, true,
                 () -> invokeLater(event, () -> onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath)),
                 () -> {});
