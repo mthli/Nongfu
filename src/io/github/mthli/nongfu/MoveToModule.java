@@ -63,7 +63,7 @@ public final class MoveToModule extends BaseAction {
 
     @Override
     void onDialogActionOkInvoked(
-            @Nonnull AnActionEvent event, @Nonnull Queue<VirtualFile> queue,
+            @Nonnull Project project, @Nonnull Queue<VirtualFile> queue,
             @Nonnull String currentModulePath, @Nonnull String targetModulePath) {
         VirtualFile currentVirtualFile = queue.poll();
         if (currentVirtualFile == null) {
@@ -71,23 +71,23 @@ public final class MoveToModule extends BaseAction {
         }
 
         String targetDirectoryPath = currentVirtualFile.getParent().getPath().replace(currentModulePath, targetModulePath);
-        PsiDirectory targetPsiDirectory = mkdirs(event, targetDirectoryPath);
+        PsiDirectory targetPsiDirectory = mkdirs(project, targetDirectoryPath);
         if (targetPsiDirectory == null) {
-            showErrorHint(event, ERROR_HINT_TITLE, "targetPsiDirectory null, path: " + currentVirtualFile.getPath());
-            onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath);
+            showErrorHint(project, ERROR_HINT_TITLE, "targetPsiDirectory null, path: " + currentVirtualFile.getPath());
+            onDialogActionOkInvoked(project, queue, currentModulePath, targetModulePath);
             return;
         }
 
         PsiElement currentPsiElement;
         if (currentVirtualFile.isDirectory()) {
-            currentPsiElement = findPsiDirectory(event, currentVirtualFile);
+            currentPsiElement = findPsiDirectory(project, currentVirtualFile);
         } else {
-            currentPsiElement = findPsiFile(event, currentVirtualFile);
+            currentPsiElement = findPsiFile(project, currentVirtualFile);
         }
 
         if (currentPsiElement == null) {
-            showErrorHint(event, ERROR_HINT_TITLE, "currentPsiElement null, path: " + currentVirtualFile.getPath());
-            onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath);
+            showErrorHint(project, ERROR_HINT_TITLE, "currentPsiElement null, path: " + currentVirtualFile.getPath());
+            onDialogActionOkInvoked(project, queue, currentModulePath, targetModulePath);
             return;
         }
 
@@ -106,8 +106,6 @@ public final class MoveToModule extends BaseAction {
             shouldCheckReferences = !matchAllCacheReferences;
         }
 
-        Project project = event.getProject();
-        // noinspection ConstantConditions
         mMoveProcessor = new MoveProcessor(
                 project, new PsiElement[]{currentPsiElement}, targetPsiDirectory,
                 shouldCheckReferences, shouldCheckReferences, shouldCheckReferences,
@@ -116,7 +114,7 @@ public final class MoveToModule extends BaseAction {
                         mCachedReferenceList = mMoveProcessor.getCachedReferenceList();
                     }
 
-                    invokeLater(event, () -> onDialogActionOkInvoked(event, queue, currentModulePath, targetModulePath));
+                    invokeLater(project, () -> onDialogActionOkInvoked(project, queue, currentModulePath, targetModulePath));
                 }, () -> {});
         mMoveProcessor.setPrepareSuccessfulSwingThreadCallback(null);
         mMoveProcessor.setPreviewUsages(shouldCheckReferences && currentVirtualFile.isWritable());

@@ -17,9 +17,7 @@
 package io.github.mthli.nongfu;
 
 import com.intellij.ide.util.DirectoryUtil;
-import com.intellij.openapi.actionSystem.AnAction;
-import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.DataKeys;
+import com.intellij.openapi.actionSystem.*;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.WriteAction;
@@ -46,7 +44,7 @@ abstract class BaseAction extends AnAction {
     @Nonnull abstract String provideDialogTitleText();
     @Nonnull abstract String provideDialogActionOkText();
     abstract void onDialogActionOkInvoked(
-            @Nonnull AnActionEvent event, @Nonnull Queue<VirtualFile> queue,
+            @Nonnull Project project, @Nonnull Queue<VirtualFile> queue,
             @Nonnull String currentModulePath, @Nonnull String targetModulePath);
 
     private Module mCurrentModule = null;
@@ -56,22 +54,23 @@ abstract class BaseAction extends AnAction {
     public final void update(@Nonnull AnActionEvent event) {
         // Disable when no project
         Project project = event.getProject();
+        Presentation presentation = event.getPresentation();
         if (project == null) {
-            event.getPresentation().setEnabled(false);
+            presentation.setEnabled(false);
             return;
         }
 
         // Disable when less than 2 modules
-        List<Module> moduleList = getModuleList(event);
+        List<Module> moduleList = getModuleList(project);
         if (moduleList.size() < 2) {
-            event.getPresentation().setEnabled(false);
+            presentation.setEnabled(false);
             return;
         }
 
         // Disable when no selected file
-        Queue<VirtualFile> selectedFileQueue = getSelectedFileQueue(event);
+        Queue<VirtualFile> selectedFileQueue = getSelectedFileQueue(event.getDataContext());
         if (selectedFileQueue.isEmpty()) {
-            event.getPresentation().setEnabled(false);
+            presentation.setEnabled(false);
             return;
         }
 
@@ -83,21 +82,25 @@ abstract class BaseAction extends AnAction {
                     hasMatch = true;
                 } else {
                     if (hasMatch) {
-                        event.getPresentation().setEnabled(false);
+                        presentation.setEnabled(false);
                         return;
                     }
                 }
             }
         }
 
-        event.getPresentation().setEnabled(isEnable(event));
+        presentation.setEnabled(isEnable(event));
     }
 
     @Override
     public final void actionPerformed(@Nonnull AnActionEvent event) {
-        List<Module> moduleList = getModuleList(event);
-        Queue<VirtualFile> selectedFileQueue = getSelectedFileQueue(event);
+        Project project = event.getProject();
+        if (project == null) {
+            return;
+        }
 
+        List<Module> moduleList = getModuleList(project);
+        Queue<VirtualFile> selectedFileQueue = getSelectedFileQueue(event.getDataContext());
         for (Module module : moduleList) {
             String modulePath = getModulePath(module);
             for (VirtualFile file : selectedFileQueue) {
@@ -109,7 +112,7 @@ abstract class BaseAction extends AnAction {
         }
 
         JPanel panel = new JPanel();
-        panel.add(buildComboBoxOfModuleList(event));
+        panel.add(buildComboBoxOfModuleList(project));
         DialogBuilder builder = new DialogBuilder()
                 .title(provideDialogTitleText())
                 .centerPanel(panel);
@@ -118,7 +121,7 @@ abstract class BaseAction extends AnAction {
         builder.addOkAction().setText(provideDialogActionOkText());
         builder.setOkOperation(() -> {
             builder.getDialogWrapper().close(DialogWrapper.OK_EXIT_CODE);
-            onDialogActionOkInvoked(event, getSelectedFileQueue(event),
+            onDialogActionOkInvoked(project, selectedFileQueue,
                     getModulePath(mCurrentModule), getModulePath(mTargetModule));
         });
 
@@ -126,17 +129,16 @@ abstract class BaseAction extends AnAction {
     }
 
     @Nonnull
-    private List<Module> getModuleList(@Nonnull AnActionEvent event) {
-        // noinspection ConstantConditions
-        Module[] modules = ModuleManager.getInstance(event.getProject()).getModules();
+    private List<Module> getModuleList(@Nonnull Project project) {
+        Module[] modules = ModuleManager.getInstance(project).getModules();
         return Arrays.stream(modules)
-                .filter(module -> !module.getName().equals(event.getProject().getName()))
+                .filter(module -> !module.getName().equals(project.getName()))
                 .collect(Collectors.toList());
     }
 
     @Nonnull
-    private ComboBox<String> buildComboBoxOfModuleList(@Nonnull AnActionEvent event) {
-        List<Module> moduleList = getModuleList(event);
+    private ComboBox<String> buildComboBoxOfModuleList(@Nonnull Project project) {
+        List<Module> moduleList = getModuleList(project);
         moduleList.remove(mCurrentModule);
 
         ComboBox<String> comboBox = new ComboBox<>();
@@ -167,32 +169,26 @@ abstract class BaseAction extends AnAction {
     }
 
     @Nonnull
-    private Queue<VirtualFile> getSelectedFileQueue(@Nonnull AnActionEvent event) {
-        VirtualFile[] files = DataKeys.VIRTUAL_FILE_ARRAY.getData(event.getDataContext());
+    private Queue<VirtualFile> getSelectedFileQueue(@Nonnull DataContext context) {
+        VirtualFile[] files = DataKeys.VIRTUAL_FILE_ARRAY.getData(context);
         return new LinkedList<>(files != null ? Arrays.asList(files) : Collections.emptyList());
     }
 
     @Nullable
-    final PsiFile findPsiFile(@Nonnull AnActionEvent event, @Nonnull VirtualFile file) {
-        // noinspection ConstantConditions
-        PsiManager manager = PsiManager.getInstance(event.getProject());
-        return manager.findFile(file);
+    final PsiFile findPsiFile(@Nonnull Project project, @Nonnull VirtualFile file) {
+        return PsiManager.getInstance(project).findFile(file);
     }
 
     @Nullable
-    final PsiDirectory findPsiDirectory(@Nonnull AnActionEvent event, @Nonnull VirtualFile file) {
-        // noinspection ConstantConditions
-        PsiManager manager = PsiManager.getInstance(event.getProject());
-        return manager.findDirectory(file);
+    final PsiDirectory findPsiDirectory(@Nonnull Project project, @Nonnull VirtualFile file) {
+        return PsiManager.getInstance(project).findDirectory(file);
     }
 
     @Nullable
-    final PsiDirectory mkdirs(@Nonnull AnActionEvent event, @Nonnull String path) {
+    final PsiDirectory mkdirs(@Nonnull Project project, @Nonnull String path) {
         return WriteAction.compute(() -> {
             try {
-                // noinspection ConstantConditions
-                PsiManager manager = PsiManager.getInstance(event.getProject());
-                return DirectoryUtil.mkdirs(manager, path);
+                return DirectoryUtil.mkdirs(PsiManager.getInstance(project), path);
             } catch (Exception e) {
                 e.printStackTrace();
                 return null;
@@ -200,15 +196,13 @@ abstract class BaseAction extends AnAction {
         });
     }
 
-    final void invokeLater(@Nonnull AnActionEvent event, @Nonnull Runnable runnable) {
-        // noinspection ConstantConditions
+    final void invokeLater(@Nonnull Project project, @Nonnull Runnable runnable) {
         ApplicationManager.getApplication().invokeLater(runnable,
-                ModalityState.defaultModalityState(), event.getProject().getDisposed());
+                ModalityState.defaultModalityState(), project.getDisposed());
     }
 
     @SuppressWarnings("SameParameterValue")
-    final void showErrorHint(@Nonnull AnActionEvent event, @Nonnull String title, @Nonnull String message) {
-        // noinspection ConstantConditions
-        CommonRefactoringUtil.showErrorHint(event.getProject(), null, title, message, null);
+    final void showErrorHint(@Nonnull Project project, @Nonnull String title, @Nonnull String message) {
+        CommonRefactoringUtil.showErrorHint(project, null, title, message, null);
     }
 }
