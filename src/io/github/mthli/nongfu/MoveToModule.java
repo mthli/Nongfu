@@ -98,8 +98,15 @@ public final class MoveToModule extends BaseAction {
         } else {
             boolean matchAllCacheReferences = true;
             for (PsiReference reference : mCachedReferenceList) {
-                if (!reference.isReferenceTo(currentPsiElement)) {
+                try {
+                    if (!reference.isReferenceTo(currentPsiElement)) {
+                        matchAllCacheReferences = false;
+                        break;
+                    }
+                } catch (Throwable t) {
+                    t.printStackTrace();
                     matchAllCacheReferences = false;
+                    break;
                 }
             }
 
